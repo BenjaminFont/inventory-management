@@ -359,6 +359,15 @@ def create_restock_order(request: CreateRestockOrderRequest):
         if not forecast:
             raise HTTPException(status_code=400, detail=f"SKU {line.item_sku} has no demand forecast")
 
+        # The demand gap is the most we ever need to restock; this mirrors the
+        # cap the UI applies, so direct API calls cannot order beyond it
+        gap = max(forecast["forecasted_demand"] - forecast["current_demand"], 0)
+        if line.quantity > gap:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Quantity {line.quantity} for {line.item_sku} exceeds demand gap of {gap}"
+            )
+
         # Price and lead time come from server data, never from the client,
         # so the budget check below cannot be bypassed by sending a low price
         # Rounded to cents to match the client's integer-cent math, so a total
@@ -374,10 +383,13 @@ def create_restock_order(request: CreateRestockOrderRequest):
         })
 
     total_cost = round(sum(item["line_total"] for item in line_items), 2)
-    if total_cost > request.budget:
+    # Compare in whole cents (like the client) so float noise or sub-cent
+    # budgets such as 100.004 are judged the same on both sides
+    budget = round(request.budget, 2)
+    if round(total_cost * 100) > round(budget * 100):
         raise HTTPException(
             status_code=400,
-            detail=f"Order total ${total_cost:,.2f} exceeds budget ${request.budget:,.2f}"
+            detail=f"Order total ${total_cost:,.2f} exceeds budget ${budget:,.2f}"
         )
 
     # The order arrives as one shipment, so it waits for its slowest item
@@ -394,7 +406,7 @@ def create_restock_order(request: CreateRestockOrderRequest):
             "order_number": f"RST-{next_number:04d}",
             "items": [{k: v for k, v in item.items() if k != "lead_time_days"} for item in line_items],
             "total_cost": total_cost,
-            "budget": request.budget,
+            "budget": budget,
             "lead_time_days": lead_time_days,
             "status": "Submitted",
             "submitted_date": submitted.isoformat(),

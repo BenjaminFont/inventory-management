@@ -85,7 +85,7 @@ class TestRestockOrderEndpoints:
 
     def test_restock_order_lead_time_calculation(self, client):
         """Test that lead time is the slowest item and sets the expected delivery."""
-        slow = forecast_for(client, "MTR-304")
+        slow = forecast_for(client, "CTL-330")
         fast = forecast_for(client, "GSK-203")
         assert slow["lead_time_days"] > fast["lead_time_days"]
 
@@ -93,7 +93,7 @@ class TestRestockOrderEndpoints:
             "budget": 10000,
             "items": [
                 {"item_sku": "GSK-203", "quantity": 1},
-                {"item_sku": "MTR-304", "quantity": 1},
+                {"item_sku": "CTL-330", "quantity": 1},
             ],
         })
         assert response.status_code == 201
@@ -123,19 +123,45 @@ class TestRestockOrderEndpoints:
         assert response.status_code == 400
 
     def test_restock_order_multi_line_cents(self, client):
-        """Test exact cent totals across lines (3 x $18.99 + 7 x $3.25 = $79.72)."""
+        """Test exact cent totals across lines (2 x $18.99 + 7 x $3.25 = $60.73)."""
         response = client.post("/api/restock-orders", json={
-            "budget": 79.72,
+            "budget": 60.73,
             "items": [
-                {"item_sku": "PSU-501", "quantity": 3},
+                {"item_sku": "PSU-501", "quantity": 2},
                 {"item_sku": "GSK-203", "quantity": 7},
             ],
         })
         assert response.status_code == 201
 
         order = response.json()
-        assert [i["line_total"] for i in order["items"]] == [56.97, 22.75]
-        assert order["total_cost"] == 79.72
+        assert [i["line_total"] for i in order["items"]] == [37.98, 22.75]
+        assert order["total_cost"] == 60.73
+
+    def test_restock_order_quantity_above_demand_gap(self, client):
+        """Test that quantity above the demand gap (GSK-203: 100) is rejected."""
+        response = client.post("/api/restock-orders", json={
+            "budget": 1000000,
+            "items": [{"item_sku": "GSK-203", "quantity": 101}],
+        })
+        assert response.status_code == 400
+        assert "demand gap" in response.json()["detail"]
+
+    def test_restock_order_no_gap_rejected(self, client):
+        """Test that an item with falling demand (MTR-304) cannot be ordered."""
+        response = client.post("/api/restock-orders", json={
+            "budget": 1000000,
+            "items": [{"item_sku": "MTR-304", "quantity": 1}],
+        })
+        assert response.status_code == 400
+
+    def test_restock_order_sub_cent_budget(self, client):
+        """Test that the budget is compared in whole cents (13.004 covers $13.00)."""
+        response = client.post("/api/restock-orders", json={
+            "budget": 13.004,
+            "items": [{"item_sku": "GSK-203", "quantity": 4}],
+        })
+        assert response.status_code == 201
+        assert response.json()["budget"] == 13.0
 
     def test_restock_order_over_budget(self, client):
         """Test that an order costing more than the budget is rejected."""
