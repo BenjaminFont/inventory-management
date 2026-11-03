@@ -1,9 +1,6 @@
 <template>
   <div class="inventory">
-    <div class="page-header">
-      <h2>{{ t('inventory.title') }}</h2>
-      <p>{{ t('inventory.description') }}</p>
-    </div>
+    <PageHeader :title="t('inventory.title')" :description="t('inventory.description')" />
 
     <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
     <div v-else-if="error" class="error">{{ error }}</div>
@@ -89,11 +86,13 @@ import { api } from '../api'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
 import InventoryDetailModal from '../components/InventoryDetailModal.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 export default {
   name: 'Inventory',
   components: {
-    InventoryDetailModal
+    InventoryDetailModal,
+    PageHeader
   },
   setup() {
     const { t, currentCurrency, translateProductName, translateWarehouse } = useI18n()

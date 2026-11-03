@@ -1,10 +1,14 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import threading
+from datetime import datetime, timedelta
 from typing import List, Optional
-from pydantic import BaseModel
-from mock_data import inventory_items, orders, demand_forecasts, backlog_items, spending_summary, monthly_spending, category_spending, recent_transactions, purchase_orders
+from pydantic import BaseModel, Field
+from mock_data import inventory_items, orders, demand_forecasts, backlog_items, spending_summary, monthly_spending, category_spending, recent_transactions, purchase_orders, restock_orders
 
 app = FastAPI(title="Factory Inventory Management System")
+
+restock_orders_lock = threading.Lock()
 
 # Quarter mapping for date filtering
 QUARTER_MAP = {
@@ -89,6 +93,8 @@ class DemandForecast(BaseModel):
     forecasted_demand: int
     trend: str
     period: str
+    unit_cost: float
+    lead_time_days: int
 
 class BacklogItem(BaseModel):
     id: str
@@ -119,6 +125,33 @@ class CreatePurchaseOrderRequest(BaseModel):
     unit_cost: float
     expected_delivery_date: str
     notes: Optional[str] = None
+
+class RestockLineItem(BaseModel):
+    """One line of a restock request. Price is deliberately not accepted from the client."""
+    item_sku: str
+    quantity: int = Field(gt=0)
+
+class CreateRestockOrderRequest(BaseModel):
+    budget: float = Field(ge=0)
+    items: List[RestockLineItem] = Field(min_length=1)
+
+class RestockOrderItem(BaseModel):
+    item_sku: str
+    item_name: str
+    quantity: int
+    unit_cost: float
+    line_total: float
+
+class RestockOrder(BaseModel):
+    id: str
+    order_number: str
+    items: List[RestockOrderItem]
+    total_cost: float
+    budget: float
+    lead_time_days: int
+    status: str
+    submitted_date: str
+    expected_delivery: str
 
 # API endpoints
 @app.get("/")
@@ -303,6 +336,84 @@ def get_monthly_trends():
     result = list(months.values())
     result.sort(key=lambda x: x['month'])
     return result
+
+@app.get("/api/restock-orders", response_model=List[RestockOrder])
+def get_restock_orders():
+    """Get submitted restock orders, newest first"""
+    # Orders are appended in submission order, so reversing gives newest first
+    return list(reversed(restock_orders))
+
+@app.post("/api/restock-orders", response_model=RestockOrder, status_code=201)
+def create_restock_order(request: CreateRestockOrderRequest):
+    """Submit a restock order for demand-forecast items"""
+    forecasts_by_sku = {f["item_sku"]: f for f in demand_forecasts}
+
+    line_items = []
+    seen_skus = set()
+    for line in request.items:
+        if line.item_sku in seen_skus:
+            raise HTTPException(status_code=400, detail=f"Duplicate SKU {line.item_sku} in order")
+        seen_skus.add(line.item_sku)
+
+        forecast = forecasts_by_sku.get(line.item_sku)
+        if not forecast:
+            raise HTTPException(status_code=400, detail=f"SKU {line.item_sku} has no demand forecast")
+
+        # The demand gap is the most we ever need to restock; this mirrors the
+        # cap the UI applies, so direct API calls cannot order beyond it
+        gap = max(forecast["forecasted_demand"] - forecast["current_demand"], 0)
+        if line.quantity > gap:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Quantity {line.quantity} for {line.item_sku} exceeds demand gap of {gap}"
+            )
+
+        # Price and lead time come from server data, never from the client,
+        # so the budget check below cannot be bypassed by sending a low price
+        # Rounded to cents to match the client's integer-cent math, so a total
+        # the client shows as fitting the budget is never rejected here
+        unit_cost = round(forecast["unit_cost"], 2)
+        line_items.append({
+            "item_sku": line.item_sku,
+            "item_name": forecast["item_name"],
+            "quantity": line.quantity,
+            "unit_cost": unit_cost,
+            "line_total": round(unit_cost * line.quantity, 2),
+            "lead_time_days": forecast["lead_time_days"],
+        })
+
+    total_cost = round(sum(item["line_total"] for item in line_items), 2)
+    # Compare in whole cents (like the client) so float noise or sub-cent
+    # budgets such as 100.004 are judged the same on both sides
+    budget = round(request.budget, 2)
+    if round(total_cost * 100) > round(budget * 100):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Order total ${total_cost:,.2f} exceeds budget ${budget:,.2f}"
+        )
+
+    # The order arrives as one shipment, so it waits for its slowest item
+    lead_time_days = max(item["lead_time_days"] for item in line_items)
+    submitted = datetime.now().replace(microsecond=0)
+    expected = submitted + timedelta(days=lead_time_days)
+
+    # FastAPI runs sync endpoints in a threadpool; the lock keeps numbering and
+    # append atomic so two simultaneous submissions can't share an order number
+    with restock_orders_lock:
+        next_number = len(restock_orders) + 1
+        order = {
+            "id": str(next_number),
+            "order_number": f"RST-{next_number:04d}",
+            "items": [{k: v for k, v in item.items() if k != "lead_time_days"} for item in line_items],
+            "total_cost": total_cost,
+            "budget": budget,
+            "lead_time_days": lead_time_days,
+            "status": "Submitted",
+            "submitted_date": submitted.isoformat(),
+            "expected_delivery": expected.isoformat(),
+        }
+        restock_orders.append(order)
+    return order
 
 if __name__ == "__main__":
     import uvicorn

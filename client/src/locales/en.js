@@ -6,8 +6,24 @@ export default {
     orders: 'Orders',
     finance: 'Finance',
     demandForecast: 'Demand Forecast',
+    restocking: 'Restocking',
+    reports: 'Reports',
     companyName: 'Catalyst Components',
-    subtitle: 'Inventory Management System'
+    subtitle: 'Inventory Management System',
+    primary: 'Primary navigation',
+    openMenu: 'Open menu',
+    collapse: 'Collapse sidebar',
+    expand: 'Expand sidebar',
+    groups: {
+      overview: 'Overview',
+      operations: 'Operations',
+      finance: 'Finance'
+    }
+  },
+
+  // Accessibility
+  a11y: {
+    skipToContent: 'Skip to main content'
   },
 
   // Dashboard
@@ -106,6 +122,16 @@ export default {
     title: 'Orders',
     description: 'View and manage customer orders',
     allOrders: 'All Orders',
+    submittedOrders: {
+      title: 'Submitted Orders',
+      empty: 'No restock orders have been submitted yet.',
+      emptyLink: 'Plan a restock',
+      leadTime: 'Lead Time',
+      leadTimeDays: '{count} days',
+      submittedDate: 'Submitted',
+      status: 'Submitted',
+      loadFailed: 'Failed to load submitted orders.'
+    },
     totalOrders: 'Total Orders',
     totalRevenue: 'Total Revenue',
     avgOrderValue: 'Avg Order Value',
@@ -185,6 +211,39 @@ export default {
       change: 'Change',
       trend: 'Trend',
       period: 'Period'
+    }
+  },
+
+  // Restocking
+  restocking: {
+    title: 'Restocking',
+    description: 'Choose a budget and get a recommended restock order based on demand forecasts',
+    filtersNote: 'Global filters (time period, location, category, status) do not apply to this page.',
+    budget: 'Budget',
+    budgetLabel: 'Restocking budget',
+    recommendedTotal: 'Recommended Total',
+    remaining: 'Remaining',
+    items: 'Items',
+    recommendations: 'Recommended Items',
+    placeOrder: 'Place Order',
+    submitting: 'Submitting...',
+    empty: 'This budget does not cover any items. Increase the budget to see recommendations.',
+    noGaps: 'No items currently need restocking.',
+    orderPlaced: 'Order {orderNumber} submitted.',
+    orderPlacedButton: 'Order placed',
+    viewOrders: 'View in Orders',
+    orderFailed: 'Failed to place the order. Please try again.',
+    loadFailed: 'Failed to load demand forecasts: ',
+    leadTimeDays: '{count} days',
+    table: {
+      sku: 'SKU',
+      itemName: 'Item Name',
+      trend: 'Trend',
+      gap: 'Demand Gap',
+      quantity: 'Quantity',
+      unitCost: 'Unit Cost',
+      lineTotal: 'Line Total',
+      leadTime: 'Lead Time'
     }
   },
 
