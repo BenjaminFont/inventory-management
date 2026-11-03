@@ -1,9 +1,6 @@
 <template>
   <div class="backlog">
-    <div class="page-header">
-      <h2>Backlog Management</h2>
-      <p>Track and resolve inventory shortages</p>
-    </div>
+    <PageHeader title="Backlog Management" description="Track and resolve inventory shortages" />
 
     <div v-if="loading" class="loading">Loading backlog...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
@@ -85,9 +82,11 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
 import { useFilters } from '../composables/useFilters'
+import PageHeader from '../components/PageHeader.vue'
 
 export default {
   name: 'Backlog',
+  components: { PageHeader },
   setup() {
     const loading = ref(true)
     const error = ref(null)

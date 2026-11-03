@@ -6,8 +6,24 @@ export default {
     orders: '注文',
     finance: '財務',
     demandForecast: '需要予測',
+    restocking: '補充発注',
+    reports: 'レポート',
     companyName: '触媒コンポーネンツ',
-    subtitle: '在庫管理システム'
+    subtitle: '在庫管理システム',
+    primary: 'メインナビゲーション',
+    openMenu: 'メニューを開く',
+    collapse: 'サイドバーを閉じる',
+    expand: 'サイドバーを開く',
+    groups: {
+      overview: '概要',
+      operations: '業務',
+      finance: '財務'
+    }
+  },
+
+  // Accessibility
+  a11y: {
+    skipToContent: 'メインコンテンツへスキップ'
   },
 
   // Dashboard
@@ -106,6 +122,16 @@ export default {
     title: '注文',
     description: '顧客注文の表示と管理',
     allOrders: 'すべての注文',
+    submittedOrders: {
+      title: '送信済み注文',
+      empty: '送信済みの補充注文はまだありません。',
+      emptyLink: '補充を計画する',
+      leadTime: 'リードタイム',
+      leadTimeDays: '{count}日',
+      submittedDate: '送信日',
+      status: '送信済み',
+      loadFailed: '送信済み注文の読み込みに失敗しました。'
+    },
     totalOrders: '総注文数',
     totalRevenue: '総収益',
     avgOrderValue: '平均注文額',
@@ -185,6 +211,39 @@ export default {
       change: '変化',
       trend: 'トレンド',
       period: '期間'
+    }
+  },
+
+  // 補充発注
+  restocking: {
+    title: '補充発注',
+    description: '予算を選択すると、需要予測に基づいた推奨補充注文が表示されます',
+    filtersNote: 'グローバルフィルター(期間、場所、カテゴリ、ステータス)はこのページには適用されません。',
+    budget: '予算',
+    budgetLabel: '補充予算',
+    recommendedTotal: '推奨合計',
+    remaining: '残額',
+    items: '品目数',
+    recommendations: '推奨品目',
+    placeOrder: '注文する',
+    submitting: '送信中...',
+    empty: 'この予算では購入できる品目がありません。予算を増やすと推奨が表示されます。',
+    noGaps: '現在、補充が必要な品目はありません。',
+    orderPlaced: '注文 {orderNumber} を送信しました。',
+    orderPlacedButton: '注文済み',
+    viewOrders: '注文ページで確認',
+    orderFailed: '注文を送信できませんでした。もう一度お試しください。',
+    loadFailed: '需要予測の読み込みに失敗しました: ',
+    leadTimeDays: '{count}日',
+    table: {
+      sku: 'SKU',
+      itemName: '品目名',
+      trend: 'トレンド',
+      gap: '需要ギャップ',
+      quantity: '数量',
+      unitCost: '単価',
+      lineTotal: '小計',
+      leadTime: 'リードタイム'
     }
   },
 
